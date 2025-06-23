@@ -7,10 +7,16 @@ on:
       - 'docker/my-nginx-app/**'
       - '.github/workflows/push-image.yml'
 
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+
 jobs:
   build-and-push:
     name: Build and Push
     runs-on: ubuntu-latest
+    environment: demo
 
     steps:
       - name: Checkout code
@@ -21,7 +27,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ vars.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -29,16 +35,11 @@ jobs:
 
       - name: Build, Tag, and Push Docker image
         run: |
-          ECR_REGISTRY="${{ vars.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com"
+          ECR_REGISTRY="${{ env.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com"
           IMAGE_TAG="${GITHUB_SHA}"
 
-          echo "Building image ${ECR_REGISTRY}/${{ vars.ECR_REPOSITORY }}:${IMAGE_TAG}"
-          docker build -t "${ECR_REGISTRY}/${{ vars.ECR_REPOSITORY }}:${IMAGE_TAG}" docker/my-nginx-app/
+          echo "Building image ${ECR_REGISTRY}/${{ env.ECR_REPOSITORY }}:${IMAGE_TAG}"
+          docker build -t "${ECR_REGISTRY}/${{ env.ECR_REPOSITORY }}:${IMAGE_TAG}" docker/my-nginx-app/
 
-          echo "Pushing image ${ECR_REGISTRY}/${{ vars.ECR_REPOSITORY }}:${IMAGE_TAG} to ECR"
-          docker push "${ECR_REGISTRY}/${{ vars.ECR_REPOSITORY }}:${IMAGE_TAG}"
-        env:
-          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
-
+          echo "Pushing image ${ECR_REGISTRY}/${{ env.ECR_REPOSITORY }}:${IMAGE_TAG} to ECR"
+          docker push "${ECR_REGISTRY}/${{ env.ECR_REPOSITORY }}:${IMAGE_TAG}"
