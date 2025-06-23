@@ -58,3 +58,9 @@ variable "route53_zone_id" {
   description = "The Route 53 Hosted Zone ID for the domain."
   type        = string
 }
+
+variable "additional_domain_names" {
+  description = "A list of additional domain names to include in the ACM certificate (e.g., wildcard)."
+  type        = list(string)
+  default     = []
+}

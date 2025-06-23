@@ -86,10 +86,12 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    type        = "redirect"
-    status_code = "HTTP_301"
-    protocol    = "HTTPS"
-    port        = "443"
+    type = "redirect"
+    redirect {
+      status_code = "HTTP_301"
+      protocol    = "HTTPS"
+      port        = "443"
+    }
   }
 }
 
@@ -97,7 +99,9 @@ resource "aws_acm_certificate" "this" {
   domain_name       = var.domain_name
   validation_method = "DNS"
 
-  subject_alternative_names = ["*.${var.domain_name}"]
+  subject_alternative_names = [
+    "*.${var.domain_name}"
+  ]
 
   lifecycle {
     create_before_destroy = true
@@ -108,29 +112,6 @@ resource "aws_acm_certificate" "this" {
     Environment = var.environment
     Application = var.app_name
   }
-}
-
-resource "aws_route53_record" "cert_validation" {
-  for_each = {
-    for dvo in aws_acm_certificate.this.domain_validation_options : dvo.domain_name => {
-      name   = dvo.resource_record_name
-      type   = dvo.resource_record_type
-      value  = dvo.resource_record_value
-      zone_id = var.route53_zone_id
-    }
-  }
-
-  allow_overwrite = true
-  name            = each.value.name
-  type            = each.value.type
-  records         = [each.value.value]
-  zone_id         = each.value.zone_id
-  ttl             = 60
-}
-
-resource "aws_acm_certificate_validation" "this" {
-  certificate_arn         = aws_acm_certificate.this.arn
-  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 }
 
 resource "aws_lb" "app_lb" {
@@ -193,23 +174,6 @@ data "aws_route53_zone" "main" {
   name = "${var.domain_name}."
 }
 
-resource "aws_acm_certificate" "this" {
-  domain_name       = var.domain_name
-  validation_method = "DNS"
-  subject_alternative_names = [
-    "*.${var.domain_name}"
-  ]
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  tags = {
-    Name        = "${var.app_name}-acm-cert"
-    Environment = var.environment
-  }
-}
-
 resource "aws_route53_record" "acm_validation" {
   for_each = {
     for dvo in aws_acm_certificate.this.domain_validation_options : dvo.domain_name => {
@@ -220,9 +184,9 @@ resource "aws_route53_record" "acm_validation" {
     }
   }
 
-  zone_id = data.aws_route53_zone.main.zone_id # Or aws_route53_zone.main.zone_id if created by TF
+  zone_id = data.aws_route53_zone.main.zone_id
   name    = each.value.name
-  type    = each.value.name
+  type    = each.value.type
   records = each.value.records
   ttl     = each.value.ttl
 }
