@@ -3,12 +3,7 @@ output "ecr_repository_url" {
   value       = module.app_ecr_repo.repository_url
 }
 
-output "app_server_elastic_ip" {
-  description = "The Elastic IP address of the application server."
-  value       = module.app_server.eip_public_ip
-}
-
-output "app_server_elastic_ip_allocation_id" {
-  description = "The allocation ID of the Elastic IP address of the application server."
-  value       = module.app_server.eip_allocation_id
+output "alb_dns_name" {
+  description = "The DNS name of the Application Load Balancer."
+  value       = aws_lb.app_lb.dns_name
 }

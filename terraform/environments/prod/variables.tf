@@ -48,3 +48,13 @@ variable "app_port" {
   description = "Port the application listens on inside the container."
   type        = number
 }
+
+variable "domain_name" {
+  description = "The main domain name for the application."
+  type        = string
+}
+
+variable "route53_zone_id" {
+  description = "The Route 53 Hosted Zone ID for the domain."
+  type        = string
+}

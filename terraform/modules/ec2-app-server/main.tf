@@ -31,21 +31,3 @@ resource "aws_instance" "this" {
     }
   )
 }
-
-resource "aws_eip" "app_server_eip" {
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${var.environment}-${var.app_name}-app-server-eip"
-    }
-  )
-}
-
-resource "aws_eip_association" "app_server_eip_assoc" {
-  instance_id   = aws_instance.this.id
-  allocation_id = aws_eip.app_server_eip.id
-
-  depends_on = [
-    aws_instance.this
-  ]
-}
