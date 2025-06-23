@@ -5,6 +5,7 @@ on:
       - main
     paths:
       - 'docker/my-nginx-app/**'
+      - '.github/workflows/push-image.yml'
 
 jobs:
   build-and-push:
