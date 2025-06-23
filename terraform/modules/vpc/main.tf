@@ -16,58 +16,99 @@ resource "aws_internet_gateway" "this" {
   tags = {
     Name        = "${var.name}-igw"
     Environment = var.environment
-    Application = var.app_name
   }
 }
 
 resource "aws_subnet" "public" {
-  count = length(var.public_subnet_cidrs)
-
-  vpc_id                  = aws_vpc.this.id
-  cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = "${var.region}${element(var.azs, count.index)}"
+  count             = length(var.public_subnet_cidrs)
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = var.public_subnet_cidrs[count.index]
+  availability_zone = data.aws_availability_zones.available.names[count.index % length(data.aws_availability_zones.available.names)]
   map_public_ip_on_launch = true
 
   tags = {
-    Name        = "${var.name}-public-subnet-${element(var.azs, count.index)}"
+    Name        = "${var.name}-public-subnet-${count.index + 1}"
     Environment = var.environment
-    Application = var.app_name
   }
 }
 
 resource "aws_subnet" "private" {
-  count = length(var.private_subnet_cidrs)
-
+  count             = length(var.private_subnet_cidrs)
   vpc_id            = aws_vpc.this.id
   cidr_block        = var.private_subnet_cidrs[count.index]
-  availability_zone = "${var.region}${element(var.azs, count.index)}"
+  availability_zone = data.aws_availability_zones.available.names[count.index % length(data.aws_availability_zones.available.names)]
+  map_public_ip_on_launch = false
 
   tags = {
-    Name        = "${var.name}-private-subnet-${element(var.azs, count.index)}"
+    Name        = "${var.name}-private-subnet-${count.index + 1}"
     Environment = var.environment
-    Application = var.app_name
   }
+}
+
+data "aws_availability_zones" "available" {
+  state = "available"
+}
+
+resource "aws_eip" "nat_eip" {
+  tags = {
+    Name        = "${var.name}-nat-eip"
+    Environment = var.environment
+  }
+}
+
+resource "aws_nat_gateway" "this" {
+  allocation_id = aws_eip.nat_eip.id
+  subnet_id     = aws_subnet.public[0].id # Place NAT Gateway in the first public subnet
+
+  tags = {
+    Name        = "${var.name}-nat-gw"
+    Environment = var.environment
+  }
+  depends_on = [aws_internet_gateway.this]
 }
 
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.this.id
-  }
-
   tags = {
-    Name        = "${var.name}-public-rtb"
+    Name        = "${var.name}-public-rt"
     Environment = var.environment
-    Application = var.app_name
   }
 }
 
-resource "aws_route_table_association" "public" {
+resource "aws_route" "public_internet_route" {
+  route_table_id         = aws_route_table.public.id
+  destination_cidr_block = "0.0.0.0/0"
+  gateway_id             = aws_internet_gateway.this.id
+}
+
+resource "aws_route_table_association" "public_subnet_associations" {
   count          = length(aws_subnet.public)
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.this.id
+
+  tags = {
+    Name        = "${var.name}-private-rt"
+    Environment = var.environment
+  }
+}
+
+resource "aws_route" "private_nat_gateway_route" {
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.this.id
+
+  depends_on = [aws_nat_gateway.this]
+}
+
+resource "aws_route_table_association" "private_subnet_associations" {
+  count          = length(aws_subnet.private)
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
 }
 
 resource "aws_security_group" "app_sg" {

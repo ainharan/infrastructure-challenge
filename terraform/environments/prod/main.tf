@@ -184,6 +184,7 @@ resource "aws_route53_record" "acm_validation" {
     }
   }
 
+  allow_overwrite = true
   zone_id = data.aws_route53_zone.main.zone_id
   name    = each.value.name
   type    = each.value.type

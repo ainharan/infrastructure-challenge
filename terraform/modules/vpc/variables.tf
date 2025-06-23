@@ -35,12 +35,6 @@ variable "region" {
   default     = "ap-southeast-2"
 }
 
-variable "azs" {
-  description = "List of availability zone suffixes to use (e.g., ['a', 'b'])."
-  type        = list(string)
-  default     = ["a", "b", "c"] # Use up to 3 AZs by default
-}
-
 variable "app_port" {
   description = "The main port your application listens on, for SG ingress."
   type        = number
